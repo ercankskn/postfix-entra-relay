@@ -1,0 +1,117 @@
+name: Publish full source bootstrap
+
+on:
+  push:
+    branches:
+      - publish-full-source-v1
+    paths:
+      - ".bootstrap/**"
+      - ".github/workflows/bootstrap-full-source.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-full-source-v1-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out bootstrap branch
+        uses: actions/checkout@v4
+        with:
+          ref: publish-full-source-v1
+          fetch-depth: 0
+
+      - name: Verify archive parts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(find .bootstrap/full-source -maxdepth 1 -type f -name 'part-*.b64' | wc -l)" -eq 14
+
+          awk '/^part-[0-9][0-9]\.b64 / {
+            print $2 "  .bootstrap/full-source/" $1
+          }' .bootstrap/MANIFEST | sha256sum -c -
+
+          test "$(cat .bootstrap/full-source/part-*.b64 | wc -c)" -eq 166628
+
+          cat .bootstrap/full-source/part-*.b64 > /tmp/full-source.b64
+          echo "40062f0dfc343c0c9f84316a2bce6ef8d603a22ba6c3c625ddcbf28bbcaeeba0  /tmp/full-source.b64" | sha256sum -c -
+
+      - name: Decode and inspect archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base64 --decode /tmp/full-source.b64 > /tmp/full-source.tar.gz
+          test "$(wc -c < /tmp/full-source.tar.gz)" -eq 124970
+          echo "bfdac32ef54f697b4d5b2cd74f418d68aeb09a4704b2e47d7e59f9f99c3dd1bf  /tmp/full-source.tar.gz" | sha256sum -c -
+
+          python3 - <<'PY'
+          import pathlib
+          import tarfile
+
+          archive = pathlib.Path('/tmp/full-source.tar.gz')
+          with tarfile.open(archive, 'r:gz') as handle:
+              members = handle.getmembers()
+              if not members:
+                  raise SystemExit('archive is empty')
+
+              for member in members:
+                  name = member.name
+                  path = pathlib.PurePosixPath(name)
+                  if path.is_absolute() or '..' in path.parts:
+                      raise SystemExit(f'unsafe archive path: {name}')
+                  if member.isdev():
+                      raise SystemExit(f'device entry is not allowed: {name}')
+
+          print(f'ARCHIVE_MEMBERS_OK={len(members)}')
+          PY
+
+          mkdir -p /tmp/full-source-tree
+          tar -xzf /tmp/full-source.tar.gz -C /tmp/full-source-tree
+
+      - name: Replace bootstrap tree with full project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
+          cp -a /tmp/full-source-tree/. .
+
+          test -f README.md
+          test -f .github/workflows/ci.yml
+          test -f src/postfix_entra_hve_submit.py
+          test -f dashboard/app.py
+          test -x tests/run.sh
+          test -x scripts/linux/secret-scan.sh
+
+          echo "PUBLIC_FILES=$(find . -type f ! -path './.git/*' | wc -l)"
+
+      - name: Run repository tests and secret scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./tests/run.sh
+          ./scripts/linux/secret-scan.sh .
+
+      - name: Publish full source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Full source tree is already published."
+            exit 0
+          fi
+
+          git commit -m "feat: publish complete v1.0.0 source tree"
+          git push origin HEAD:publish-full-source-v1
