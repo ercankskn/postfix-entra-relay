@@ -66,7 +66,7 @@ jobs:
           test -s release/postfix-entra-relay-v1.0.0.tar.gz
           test -s release/postfix-entra-relay-v1.0.0.zip
           test -s release/postfix-entra-relay-v1.0.0.bundle
-          sha256sum -c release/SHA256SUMS
+          (cd release && sha256sum -c SHA256SUMS)
 
       - name: Write release notes
         shell: bash
