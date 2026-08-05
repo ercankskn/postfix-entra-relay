@@ -20,6 +20,9 @@ source "$ENV_FILE"
 if ! grep -q '^hvepipe[[:space:]]' /etc/postfix/master.cf; then
   cat "$ROOT/config/postfix/master.cf.snippet" >> /etc/postfix/master.cf
 fi
+if ! grep -q '^hvesizepolicy[[:space:]]' /etc/postfix/master.cf; then
+  cat "$ROOT/config/postfix/size-policy.master.cf.snippet" >> /etc/postfix/master.cf
+fi
 
 postconf -e 'relayhost = [smtp.office365.com]:587'
 postconf -e 'smtp_sasl_auth_enable = yes'
@@ -32,6 +35,18 @@ postconf -e 'smtp_destination_rate_delay = 2s'
 postconf -e 'transport_maps = hash:/etc/postfix/transport_hve, hash:/etc/postfix/transport'
 postconf -e 'hvepipe_destination_recipient_limit = 1'
 postconf -e "always_bcc = ${ARCHIVE_ADDRESS}"
+
+SIZE_POLICY_CHECK='check_policy_service unix:private/hvesizepolicy'
+CURRENT_EOD_RESTRICTIONS="$(postconf -h smtpd_end_of_data_restrictions 2>/dev/null || true)"
+if [[ "$CURRENT_EOD_RESTRICTIONS" != *"$SIZE_POLICY_CHECK"* ]]; then
+  if [[ -n "$CURRENT_EOD_RESTRICTIONS" ]]; then
+    postconf -e "smtpd_end_of_data_restrictions = ${CURRENT_EOD_RESTRICTIONS}, ${SIZE_POLICY_CHECK}"
+  else
+    postconf -e "smtpd_end_of_data_restrictions = ${SIZE_POLICY_CHECK}"
+  fi
+fi
+postconf -e 'smtpd_policy_service_timeout = 10s'
+postconf -e 'smtpd_policy_service_try_limit = 2'
 
 postfix check
 systemctl reload postfix
