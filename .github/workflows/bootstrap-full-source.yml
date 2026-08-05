@@ -38,6 +38,26 @@ jobs:
           ref: publish-full-source-v1
           fetch-depth: 0
 
+      - name: Recover corrupted archive chunks from verified bootstrap copy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin full-source-bootstrap:refs/remotes/origin/full-source-bootstrap
+          git show origin/full-source-bootstrap:.bootstrap/parts/part-03.b64 > /tmp/recovered-part-04-05.b64
+
+          test "$(wc -c < /tmp/recovered-part-04-05.b64)" -eq 24000
+
+          head -c 12000 /tmp/recovered-part-04-05.b64 > .bootstrap/full-source/part-04.b64
+          tail -c +12001 /tmp/recovered-part-04-05.b64 > .bootstrap/full-source/part-05.b64
+
+          printf '%s  %s\n' \
+            '4ca0a55ae1e12cac38319ef1591b1a796c2163edaadb826399a23768a0518abe' \
+            '.bootstrap/full-source/part-04.b64' \
+            '28d4611a5f3ab8ff092c55844ecf375608174ee3eb9486efa0ef43b2f86be32b' \
+            '.bootstrap/full-source/part-05.b64' \
+          | sha256sum -c -
+
       - name: Verify archive parts
         shell: bash
         run: |
