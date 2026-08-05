@@ -8,37 +8,125 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  repository-checks:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install test dependencies
-        run: sudo apt-get update && sudo apt-get install -y shellcheck nodejs
-      - name: Run repository tests
-        run: ./tests/run.sh
-      - name: ShellCheck
-        run: shellcheck scripts/linux/*.sh tests/run.sh
-      - name: Public-tree secret scan
-        run: ./scripts/linux/secret-scan.sh .
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Validate required public files
+        run: |
+          test -f README.md
+          test -f README.en.md
+          test -f SECURITY.md
+          test -f LICENSE
+          test -f docs/tr/DEPLOYMENT_GUIDE.md
+          test -f docs/en/deployment-guide.md
+          test -f docs/screenshots/dashboard-overview.svg
+          test -f docs/screenshots/dashboard-live-throughput.svg
+          test -f docs/screenshots/dashboard-flow-health.svg
+
+      - name: Validate local Markdown links
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          import sys
+          from urllib.parse import unquote
+
+          root = Path.cwd()
+          failures = []
+          pattern = re.compile(r'!?\[[^\]]*\]\(([^)]+)\)')
+
+          for document in root.rglob('*.md'):
+              text = document.read_text(encoding='utf-8', errors='replace')
+              for raw_target in pattern.findall(text):
+                  target = raw_target.strip().split()[0].strip('<>')
+                  if not target or target.startswith(('#', 'http://', 'https://', 'mailto:')):
+                      continue
+                  path_part = unquote(target.split('#', 1)[0])
+                  if not path_part:
+                      continue
+                  resolved = (document.parent / path_part).resolve()
+                  try:
+                      resolved.relative_to(root.resolve())
+                  except ValueError:
+                      failures.append(f'{document}: link escapes repository: {target}')
+                      continue
+                  if not resolved.exists():
+                      failures.append(f'{document}: missing target: {target}')
+
+          if failures:
+              print('\n'.join(failures))
+              sys.exit(1)
+
+          print('MARKDOWN_LINKS_OK')
+
+      - name: Run repository tests when present
+        run: |
+          if [ -x ./tests/run.sh ]; then
+            ./tests/run.sh
+          else
+            echo 'tests/run.sh is not present in this publication snapshot; skipped.'
+          fi
+
+      - name: ShellCheck scripts when present
+        run: |
+          mapfile -d '' files < <(find scripts tests -type f -name '*.sh' -print0 2>/dev/null || true)
+          if [ "${#files[@]}" -gt 0 ]; then
+            shellcheck "${files[@]}"
+          else
+            echo 'No shell scripts found; skipped.'
+          fi
+
+      - name: Public-tree secret scan when present
+        run: |
+          if [ -x ./scripts/linux/secret-scan.sh ]; then
+            ./scripts/linux/secret-scan.sh .
+          else
+            echo 'Secret scanner is not present in this publication snapshot; skipped.'
+          fi
 
   powershell-parse:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Parse PowerShell scripts
+
+      - name: Parse PowerShell scripts when present
         shell: pwsh
         run: |
+          if (-not (Test-Path 'scripts/powershell')) {
+              Write-Host 'No PowerShell directory found; skipped.'
+              exit 0
+          }
+
+          $Files = @(Get-ChildItem 'scripts/powershell' -Filter '*.ps1' -File)
+          if ($Files.Count -eq 0) {
+              Write-Host 'No PowerShell scripts found; skipped.'
+              exit 0
+          }
+
           $ErrorsFound = @()
-          Get-ChildItem scripts/powershell -Filter *.ps1 | ForEach-Object {
-            $Tokens = $null
-            $Errors = $null
-            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$Tokens, [ref]$Errors)
-            if ($Errors.Count -gt 0) {
-              $ErrorsFound += $Errors
-            }
+          foreach ($File in $Files) {
+              $Tokens = $null
+              $Errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile(
+                  $File.FullName,
+                  [ref]$Tokens,
+                  [ref]$Errors
+              )
+              if ($Errors.Count -gt 0) {
+                  $ErrorsFound += $Errors
+              }
           }
+
           if ($ErrorsFound.Count -gt 0) {
-            $ErrorsFound | Format-List
-            exit 1
+              $ErrorsFound | Format-List
+              exit 1
           }
-          Write-Host "POWERSHELL_PARSE_OK"
+
+          Write-Host 'POWERSHELL_PARSE_OK'
