@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main, publish-full-source-v1]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repository tests
+        run: ./tests/run.sh
+      - name: Public secret scan
+        run: ./scripts/linux/secret-scan.sh .

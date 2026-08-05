@@ -1,4 +1,2 @@
-# Exchange Online authoritative accepted domains routed to HVE.
 example.com
 subsidiary.example
-exampletenant.onmicrosoft.com

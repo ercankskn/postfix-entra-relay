@@ -1,0 +1,9 @@
+[project]
+name = "postfix-entra-relay"
+version = "1.0.0"
+description = "OAuth split mail relay reference implementation for Postfix and Microsoft 365"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

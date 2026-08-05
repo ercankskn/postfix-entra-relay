@@ -1,18 +1,16 @@
 [Unit]
-Description=Postfix Entra Relay daily sender-origin report
+Description=Postfix Entra Relay daily original sender report
 After=network-online.target postfix.service
 Wants=network-online.target
 
 [Service]
 Type=oneshot
+ExecStart=/usr/local/sbin/postfix-entra-daily-origin-report
 User=root
 Group=root
-Environment=POSTFIX_ENTRA_REPORT_CONFIG=/etc/postfix-entra-relay/report.json
-ExecStart=/usr/local/sbin/postfix-entra-daily-origin-report
-Nice=10
-NoNewPrivileges=true
 PrivateTmp=true
+NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/postfix-entra-relay
-ReadOnlyPaths=/var/log
+ReadOnlyPaths=/var/log /etc/postfix-entra-relay
