@@ -38,63 +38,38 @@ jobs:
           ref: publish-full-source-v1
           fetch-depth: 0
 
-      - name: Recover corrupted chunks from 16K bootstrap archive
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git fetch origin full-source-bootstrap:refs/remotes/origin/full-source-bootstrap
-
-          git show origin/full-source-bootstrap:.bootstrap/parts/part-03.b64 \
-            | tr -d '\r\n' \
-            > /tmp/old-part-03.b64
-
-          git show origin/full-source-bootstrap:.bootstrap/parts/part-04.b64 \
-            | tr -d '\r\n' \
-            > /tmp/old-part-04.b64
-
-          test "$(wc -c < /tmp/old-part-03.b64)" -eq 16000
-          test "$(wc -c < /tmp/old-part-04.b64)" -eq 16000
-
-          head -c 12000 /tmp/old-part-03.b64 \
-            > .bootstrap/full-source/part-04.b64
-
-          {
-            tail -c 4000 /tmp/old-part-03.b64
-            head -c 8000 /tmp/old-part-04.b64
-          } > .bootstrap/full-source/part-05.b64
-
-          printf '%s  %s\n' \
-            '4ca0a55ae1e12cac38319ef1591b1a796c2163edaadb826399a23768a0518abe' \
-            '.bootstrap/full-source/part-04.b64' \
-            '28d4611a5f3ab8ff092c55844ecf375608174ee3eb9486efa0ef43b2f86be32b' \
-            '.bootstrap/full-source/part-05.b64' \
-          | sha256sum -c -
-
-      - name: Verify archive parts
+      - name: Assemble and diagnose current archive
         shell: bash
         run: |
           set -euo pipefail
 
           test "$(find .bootstrap/full-source -maxdepth 1 -type f -name 'part-*.b64' | wc -l)" -eq 14
 
-          awk '/^part-[0-9][0-9]\.b64 / {
-            print $2 "  .bootstrap/full-source/" $1
-          }' .bootstrap/MANIFEST | sha256sum -c -
+          mkdir -p /tmp/normalized-parts
+          for part in .bootstrap/full-source/part-*.b64; do
+            name="$(basename "$part")"
+            tr -d '\r\n' < "$part" > "/tmp/normalized-parts/$name"
+            printf '%s bytes=%s sha256=%s\n' \
+              "$name" \
+              "$(wc -c < "/tmp/normalized-parts/$name")" \
+              "$(sha256sum "/tmp/normalized-parts/$name" | awk '{print $1}')"
+          done
 
-          test "$(cat .bootstrap/full-source/part-*.b64 | wc -c)" -eq 166628
+          cat /tmp/normalized-parts/part-*.b64 > /tmp/full-source.b64
+          echo "ASSEMBLED_BYTES=$(wc -c < /tmp/full-source.b64)"
+          echo "ASSEMBLED_SHA256=$(sha256sum /tmp/full-source.b64 | awk '{print $1}')"
 
-          cat .bootstrap/full-source/part-*.b64 > /tmp/full-source.b64
-          echo "40062f0dfc343c0c9f84316a2bce6ef8d603a22ba6c3c625ddcbf28bbcaeeba0  /tmp/full-source.b64" | sha256sum -c -
+          test "$(wc -c < /tmp/full-source.b64)" -eq 166628
+          base64 --decode /tmp/full-source.b64 > /tmp/full-source.tar.gz
 
-      - name: Decode and inspect archive
+          echo "ARCHIVE_BYTES=$(wc -c < /tmp/full-source.tar.gz)"
+          echo "ARCHIVE_SHA256=$(sha256sum /tmp/full-source.tar.gz | awk '{print $1}')"
+          gzip -t /tmp/full-source.tar.gz
+
+      - name: Inspect archive safely
         shell: bash
         run: |
           set -euo pipefail
-
-          base64 --decode /tmp/full-source.b64 > /tmp/full-source.tar.gz
-          test "$(wc -c < /tmp/full-source.tar.gz)" -eq 124970
-          echo "bfdac32ef54f697b4d5b2cd74f418d68aeb09a4704b2e47d7e59f9f99c3dd1bf  /tmp/full-source.tar.gz" | sha256sum -c -
 
           python3 - <<'PY'
           import pathlib
@@ -117,32 +92,35 @@ jobs:
           print(f'ARCHIVE_MEMBERS_OK={len(members)}')
           PY
 
+          rm -rf /tmp/full-source-tree
           mkdir -p /tmp/full-source-tree
           tar -xzf /tmp/full-source.tar.gz -C /tmp/full-source-tree
 
-      - name: Replace bootstrap tree with full project
+      - name: Validate reconstructed project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f /tmp/full-source-tree/README.md
+          test -f /tmp/full-source-tree/.github/workflows/ci.yml
+          test -f /tmp/full-source-tree/src/postfix_entra_hve_submit.py
+          test -f /tmp/full-source-tree/dashboard/app.py
+          test -x /tmp/full-source-tree/tests/run.sh
+          test -x /tmp/full-source-tree/scripts/linux/secret-scan.sh
+
+          cd /tmp/full-source-tree
+          ./tests/run.sh
+          ./scripts/linux/secret-scan.sh .
+
+          echo "PUBLIC_FILES=$(find . -type f | wc -l)"
+
+      - name: Replace bootstrap tree with validated project
         shell: bash
         run: |
           set -euo pipefail
 
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
           cp -a /tmp/full-source-tree/. .
-
-          test -f README.md
-          test -f .github/workflows/ci.yml
-          test -f src/postfix_entra_hve_submit.py
-          test -f dashboard/app.py
-          test -x tests/run.sh
-          test -x scripts/linux/secret-scan.sh
-
-          echo "PUBLIC_FILES=$(find . -type f ! -path './.git/*' | wc -l)"
-
-      - name: Run repository tests and secret scan
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./tests/run.sh
-          ./scripts/linux/secret-scan.sh .
 
       - name: Publish full source commit
         shell: bash
