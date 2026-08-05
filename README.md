@@ -4,6 +4,22 @@
 
 [English summary](README.en.md) · [Uçtan uca Türkçe kurulum](docs/tr/DEPLOYMENT_GUIDE.md) · [English deployment guide](docs/en/deployment-guide.md) · [Güvenlik](SECURITY.md)
 
+## Dashboard görünümü
+
+Aşağıdaki görseller, gerçek tenant ve müşteri verisi içermeyen **sanitized demo ekranlarıdır**.
+
+### Genel görünüm
+
+[![Postfix Entra Relay dashboard overview](docs/screenshots/dashboard-overview.svg)](docs/screenshots/dashboard-overview.svg)
+
+### Anlık trafik
+
+[![Live throughput chart](docs/screenshots/dashboard-live-throughput.svg)](docs/screenshots/dashboard-live-throughput.svg)
+
+### Akış sağlığı
+
+[![Flow health cards](docs/screenshots/dashboard-flow-health.svg)](docs/screenshots/dashboard-flow-health.svg)
+
 ## Ne çözer?
 
 Uygulamalar, yazıcılar, santraller, rapor servisleri ve eski cihazlar genellikle tek bir SMTP relay'e mail bırakır. Normal Exchange Online SMTP AUTH yolu mailbox başına hız ve günlük alıcı sınırlarına tabidir. HVE ise yüksek hacimli **tenant içi** mail için ayrı bir yoldur. Bu proje iki yolu Postfix üzerinde alıcı bazında birleştirir:
