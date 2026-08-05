@@ -8,6 +8,6 @@ A production-oriented reference implementation for split-routing application and
 
 The repository includes sanitized examples, PowerShell automation, a hardened HVE pipe helper, daily sender-origin reporting, validation tooling, and an optional responsive dashboard.
 
-Start with the [English deployment guide](docs/en/deployment-guide.md), the [Turkish deployment guide](docs/tr/DEPLOYMENT_GUIDE.md), or the [architecture summary](docs/en/architecture.md).
+Start with the [English deployment guide](docs/en/deployment-guide.md), the [Turkish deployment guide](docs/tr/DEPLOYMENT_GUIDE.md), or the [security guide](SECURITY.md).
 
 No real tenant identifiers, credentials, tokens, domains, addresses, certificates, or production logs are included.
