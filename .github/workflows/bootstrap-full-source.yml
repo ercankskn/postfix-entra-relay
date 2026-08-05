@@ -1,21 +1,11 @@
-name: Publish full source bootstrap
+name: Publish validated source tree
 
 on:
   push:
     branches:
       - publish-full-source-v1
     paths:
-      - ".bootstrap/**"
-      - ".github/workflows/bootstrap-full-source.yml"
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - reopened
-      - synchronize
-    paths:
-      - ".bootstrap/**"
+      - ".bootstrap/rebuild/**"
       - ".github/workflows/bootstrap-full-source.yml"
   workflow_dispatch:
 
@@ -23,118 +13,111 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-full-source-v1-bootstrap
+  group: publish-validated-source-tree
   cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Check out bootstrap branch
+      - name: Check out publication branch
         uses: actions/checkout@v4
         with:
           ref: publish-full-source-v1
           fetch-depth: 0
 
-      - name: Assemble and diagnose current archive
+      - name: Verify staged archive parts
         shell: bash
         run: |
           set -euo pipefail
 
-          test "$(find .bootstrap/full-source -maxdepth 1 -type f -name 'part-*.b64' | wc -l)" -eq 14
+          test "$(wc -c < .bootstrap/rebuild/part-00.b64)" -eq 7000
+          test "$(wc -c < .bootstrap/rebuild/part-01.b64)" -eq 7000
+          test "$(wc -c < .bootstrap/rebuild/part-02.b64)" -eq 7000
+          test "$(wc -c < .bootstrap/rebuild/part-03.b64)" -eq 3684
 
-          mkdir -p /tmp/normalized-parts
-          for part in .bootstrap/full-source/part-*.b64; do
-            name="$(basename "$part")"
-            tr -d '\r\n' < "$part" > "/tmp/normalized-parts/$name"
-            printf '%s bytes=%s sha256=%s\n' \
-              "$name" \
-              "$(wc -c < "/tmp/normalized-parts/$name")" \
-              "$(sha256sum "/tmp/normalized-parts/$name" | awk '{print $1}')"
-          done
+          printf '%s  %s\n' \
+            '11c19d882b2dc7583597ebdb02ac1512cf0ad73cebd84f8064566b20aebd563f' '.bootstrap/rebuild/part-00.b64' \
+            'e31a5ac54abaecabb1ab645f01b4388498281412607cdbec5a90df605f59b2d3' '.bootstrap/rebuild/part-01.b64' \
+            '11c647e3ddd03223548ade05860315f50af79f84b22a49e795e0c96bdb78d19b' '.bootstrap/rebuild/part-02.b64' \
+            'b18f7768a054eb1314d9eccdf5107856d969062c9977d30b2e4505efe82b9ee7' '.bootstrap/rebuild/part-03.b64' \
+          | sha256sum -c -
 
-          cat /tmp/normalized-parts/part-*.b64 > /tmp/full-source.b64
-          echo "ASSEMBLED_BYTES=$(wc -c < /tmp/full-source.b64)"
-          echo "ASSEMBLED_SHA256=$(sha256sum /tmp/full-source.b64 | awk '{print $1}')"
+          cat .bootstrap/rebuild/part-*.b64 > /tmp/source-overlay.b64
+          test "$(wc -c < /tmp/source-overlay.b64)" -eq 24684
+          echo 'ce13a9902cfed720156f6f32397cc310f8521beb5128fbd0a5b1b2e54f151a45  /tmp/source-overlay.b64' \
+            | sha256sum -c -
 
-          test "$(wc -c < /tmp/full-source.b64)" -eq 166628
-          base64 --decode /tmp/full-source.b64 > /tmp/full-source.tar.gz
-
-          echo "ARCHIVE_BYTES=$(wc -c < /tmp/full-source.tar.gz)"
-          echo "ARCHIVE_SHA256=$(sha256sum /tmp/full-source.tar.gz | awk '{print $1}')"
-          gzip -t /tmp/full-source.tar.gz
-
-      - name: Inspect archive safely
+      - name: Decode and inspect archive safely
         shell: bash
         run: |
           set -euo pipefail
+
+          base64 --decode /tmp/source-overlay.b64 > /tmp/source-overlay.tar.gz
+          test "$(wc -c < /tmp/source-overlay.tar.gz)" -eq 18513
+          echo 'a99e6d1c166a30b60161e626708fd9b4b36b2b215c37842f371df551aa7ba4b3  /tmp/source-overlay.tar.gz' \
+            | sha256sum -c -
+          gzip -t /tmp/source-overlay.tar.gz
 
           python3 - <<'PY'
           import pathlib
           import tarfile
 
-          archive = pathlib.Path('/tmp/full-source.tar.gz')
+          archive = pathlib.Path('/tmp/source-overlay.tar.gz')
           with tarfile.open(archive, 'r:gz') as handle:
               members = handle.getmembers()
               if not members:
                   raise SystemExit('archive is empty')
 
               for member in members:
-                  name = member.name
-                  path = pathlib.PurePosixPath(name)
+                  path = pathlib.PurePosixPath(member.name)
                   if path.is_absolute() or '..' in path.parts:
-                      raise SystemExit(f'unsafe archive path: {name}')
+                      raise SystemExit(f'unsafe archive path: {member.name}')
                   if member.isdev():
-                      raise SystemExit(f'device entry is not allowed: {name}')
+                      raise SystemExit(f'device entry is not allowed: {member.name}')
 
           print(f'ARCHIVE_MEMBERS_OK={len(members)}')
           PY
 
-          rm -rf /tmp/full-source-tree
-          mkdir -p /tmp/full-source-tree
-          tar -xzf /tmp/full-source.tar.gz -C /tmp/full-source-tree
-
-      - name: Validate reconstructed project
+      - name: Restore full source tree
         shell: bash
         run: |
           set -euo pipefail
 
-          test -f /tmp/full-source-tree/README.md
-          test -f /tmp/full-source-tree/.github/workflows/ci.yml
-          test -f /tmp/full-source-tree/src/postfix_entra_hve_submit.py
-          test -f /tmp/full-source-tree/dashboard/app.py
-          test -x /tmp/full-source-tree/tests/run.sh
-          test -x /tmp/full-source-tree/scripts/linux/secret-scan.sh
+          tar -xzf /tmp/source-overlay.tar.gz -C .
+          rm -rf .bootstrap
+          rm -f .github/workflows/bootstrap-full-source.yml
 
-          cd /tmp/full-source-tree
+          test -f src/postfix_entra_hve_submit.py
+          test -f src/postfix_entra_daily_origin_report.py
+          test -f dashboard/app.py
+          test -f dashboard/collector.py
+          test -x tests/run.sh
+          test -x scripts/linux/secret-scan.sh
+          test -f .github/workflows/ci.yml
+
+      - name: Test restored repository
+        shell: bash
+        run: |
+          set -euo pipefail
           ./tests/run.sh
           ./scripts/linux/secret-scan.sh .
 
-          echo "PUBLIC_FILES=$(find . -type f | wc -l)"
-
-      - name: Replace bootstrap tree with validated project
+      - name: Publish restored source
         shell: bash
         run: |
           set -euo pipefail
 
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
-          cp -a /tmp/full-source-tree/. .
-
-      - name: Publish full source commit
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
+          git diff --cached --stat
 
           if git diff --cached --quiet; then
-            echo "Full source tree is already published."
+            echo 'No publication changes found.'
             exit 0
           fi
 
-          git commit -m "feat: publish complete v1.0.0 source tree"
+          git commit -m 'feat: restore complete v1.0.0 source tree'
           git push origin HEAD:publish-full-source-v1
