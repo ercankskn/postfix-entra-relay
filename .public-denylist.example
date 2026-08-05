@@ -1,0 +1,2 @@
+# Export this as a regex before running the scanner, for example:
+# export PUBLIC_DENYLIST_REGEX='customer-name|tenant-guid-fragment|public-ip-fragment'

@@ -1,0 +1,12 @@
+{
+  "recipient": "alerts@example.com",
+  "sender": "hve-relay@example.com",
+  "reply_to": "relay@example.com",
+  "archive_address": "archive@example.com",
+  "subject_prefix": "[DAILY RELAY REPORT]",
+  "log_directory": "/var/log",
+  "log_glob": "mail.log*",
+  "state_dir": "/var/lib/postfix-entra-relay/daily-origin-report",
+  "hve_submit": "/usr/local/sbin/postfix-entra-hve-submit",
+  "hve_run_user": "postfix-entra-hve"
+}

@@ -1,0 +1,5 @@
+# Optional regexp sender normalization.
+# Left side is a regular expression; right side is the canonical address.
+# This map does NOT create Microsoft 365 recipients or SendAs rights.
+
+/^legacy-report@example\.net$/ reportserver@example.com

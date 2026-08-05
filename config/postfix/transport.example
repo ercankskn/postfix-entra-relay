@@ -1,0 +1,3 @@
+# Optional non-HVE transport overrides.
+# Leave empty when all non-matching recipients should use relayhost.
+# partner.example smtp:[special-relay.example]:25

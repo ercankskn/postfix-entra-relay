@@ -1,0 +1,15 @@
+{
+  "tenant_id": "<TENANT_ID>",
+  "client_id": "<HVE_APP_CLIENT_ID>",
+  "client_secret": "<HVE_APP_CLIENT_SECRET>",
+  "auth_user": "hve-relay@example.com",
+  "display_name": "Application Mail Service",
+  "reply_to": "relay@example.com",
+  "smtp_server": "smtp.hve.mx.microsoft",
+  "smtp_port": 587,
+  "scope": "https://outlook.office.com/.default",
+  "token_refresh_margin_seconds": 1200,
+  "bulk_to_threshold": 50,
+  "bulk_alert_recipient": "alerts@example.com",
+  "bulk_alert_state_max_age_seconds": 604800
+}

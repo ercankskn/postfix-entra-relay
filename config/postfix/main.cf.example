@@ -1,0 +1,40 @@
+# Postfix Entra Relay - relevant main.cf settings
+# Merge into the distribution default; do not copy without reviewing hostname,
+# networks, TLS and local-delivery settings.
+
+myhostname = mail-relay.example.net
+mydomain = example.net
+myorigin = $mydomain
+mydestination =
+inet_interfaces = all
+inet_protocols = all
+
+# Never create an open relay. Keep this file root-owned.
+mynetworks = cidr:/etc/postfix/mynetworks.postfix-entra
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
+
+# Default/external path: Exchange Online SMTP AUTH + OAuth.
+relayhost = [smtp.office365.com]:587
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options =
+smtp_sasl_mechanism_filter = xoauth2
+smtp_tls_security_level = encrypt
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+
+# Conservative external SMTP AUTH pacing. Adjust only after measuring.
+smtp_destination_concurrency_limit = 1
+smtp_destination_rate_delay = 2s
+
+# Recipient-based split routing. HVE must be first.
+transport_maps = hash:/etc/postfix/transport_hve, hash:/etc/postfix/transport
+hvepipe_destination_recipient_limit = 1
+
+# Optional archive copy. The address should belong to an HVE-routed accepted domain.
+always_bcc = archive@example.com
+
+# Optional sender normalization. This does not grant Exchange Online SendAs.
+sender_canonical_classes = envelope_sender, header_sender
+sender_canonical_maps = regexp:/etc/postfix/sender_canonical

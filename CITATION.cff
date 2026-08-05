@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+title: Postfix Entra Relay
+message: "If you use this reference implementation, cite the repository release."
+type: software
+version: 1.0.0
+license: MIT
+authors:
+  - name: Community contributors
+repository-code: "https://github.com/OWNER/postfix-entra-relay"
+abstract: "OAuth-based split mail relay reference implementation for Postfix, Microsoft 365 High Volume Email, and Exchange Online SMTP AUTH."
+keywords:
+  - postfix
+  - microsoft-365
+  - exchange-online
+  - oauth2
+  - high-volume-email

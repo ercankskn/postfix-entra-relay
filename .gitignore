@@ -1,0 +1,50 @@
+# Secrets and tokens
+*.key
+*.pem
+*.pfx
+*.p12
+*.pass
+*.secret
+*.token
+*token*.json
+hve-oauth.json
+sasl_passwd
+sasl_passwd.db
+sasl-xoauth2.conf
+.env
+.env.*
+!.env.example
+
+# Logs and exports
+*.log
+*.eml
+*.msg
+*.pst
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.csv
+!examples/*.csv
+
+# Runtime/database
+*.db
+*.db-wal
+*.db-shm
+*.sqlite*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build/release
+build/
+dist/
+release/

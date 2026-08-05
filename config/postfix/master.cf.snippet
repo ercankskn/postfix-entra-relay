@@ -1,0 +1,5 @@
+# Add to /etc/postfix/master.cf
+# One recipient per invocation is enforced by hvepipe_destination_recipient_limit=1.
+
+hvepipe unix - n n - 10 pipe
+  flags=Rq user=postfix-entra-hve argv=/usr/local/sbin/postfix-entra-hve-submit --recipient=${recipient} --queue-id=${queue_id} --original-sender=${sender}

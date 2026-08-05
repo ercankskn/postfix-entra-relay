@@ -1,0 +1,3 @@
+# sasl-xoauth2 interprets the password field as a token-file path.
+# Run postmap after creating the production file.
+[smtp.office365.com]:587 relay@example.com:/etc/postfix-oauth/relay@example.com

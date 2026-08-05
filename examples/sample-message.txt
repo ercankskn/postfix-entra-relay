@@ -1,0 +1,9 @@
+From: Legacy Report <reportserver@example.com>
+To: User One <user1@example.com>, User Two <user2@example.com>
+Cc: Observer <observer@example.com>
+Subject: Example relay message
+Message-ID: <example-001@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+This is a redacted sample message.

@@ -1,0 +1,21 @@
+# The dashboard application should listen only on 127.0.0.1:8765.
+# Terminate TLS and enforce authentication at the reverse proxy.
+server {
+    listen 443 ssl http2;
+    server_name relay-dashboard.example.net;
+
+    ssl_certificate     /etc/ssl/certs/relay-dashboard-fullchain.pem;
+    ssl_certificate_key /etc/ssl/private/relay-dashboard.key;
+
+    auth_basic "Relay dashboard";
+    auth_basic_user_file /etc/nginx/.htpasswd-postfix-entra;
+
+    location / {
+        proxy_pass http://127.0.0.1:8765;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 60s;
+    }
+}

@@ -1,0 +1,8 @@
+# Every Microsoft 365 authoritative/accepted domain that should use HVE.
+# Include subdomains explicitly unless your map/database type provides matching
+# behavior you have tested.
+example.com                  hvepipe:
+students.example.com         hvepipe:
+subsidiary.example           hvepipe:
+example.onmicrosoft.com      hvepipe:
+example.mail.onmicrosoft.com hvepipe:
