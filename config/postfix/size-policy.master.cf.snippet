@@ -1,0 +1,6 @@
+
+# Postfix Entra Relay - route oversized messages through Exchange Online
+hvesizepolicy unix  -       n       n       -       0       spawn
+  user=nobody argv=/usr/local/sbin/postfix-entra-size-policy
+  --threshold-bytes=9000000
+  --fallback-transport=smtp:[smtp.office365.com]:587
