@@ -8,6 +8,7 @@ if [[ ${EUID} -ne 0 ]]; then
 fi
 
 install -o root -g postfix-entra-hve -m 0750 "$ROOT/src/postfix_entra_hve_submit.py" /usr/local/sbin/postfix-entra-hve-submit
+install -o root -g root -m 0755 "$ROOT/src/postfix_entra_size_policy.py" /usr/local/sbin/postfix-entra-size-policy
 install -o root -g root -m 0755 "$ROOT/src/postfix_entra_daily_origin_report.py" /usr/local/sbin/postfix-entra-daily-origin-report
 install -o root -g root -m 0644 "$ROOT/config/systemd/postfix-entra-daily-origin-report.service" /etc/systemd/system/
 install -o root -g root -m 0644 "$ROOT/config/systemd/postfix-entra-daily-origin-report.timer" /etc/systemd/system/
