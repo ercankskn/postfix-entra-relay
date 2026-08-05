@@ -1,11 +1,10 @@
 [Unit]
-Description=Send previous-day Postfix Entra Relay report at 00:05
+Description=Run Postfix Entra Relay daily report
 
 [Timer]
-OnCalendar=*-*-* 00:05:00
+OnCalendar=*-*-* 08:00:00
 Persistent=true
-AccuracySec=1min
-RandomizedDelaySec=0
+RandomizedDelaySec=300
 Unit=postfix-entra-daily-origin-report.service
 
 [Install]

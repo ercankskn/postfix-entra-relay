@@ -1,6 +1,4 @@
-# CIDR map used by: mynetworks = cidr:/etc/postfix/mynetworks.postfix-entra
-# Replace with the exact application/device networks that may relay.
-127.0.0.0/8        OK
-[::1]/128          OK
-10.20.30.0/24      OK
-192.0.2.40/32      OK
+# Use only exact application/device source networks.
+127.0.0.0/8
+10.10.10.20/32
+10.10.20.0/28

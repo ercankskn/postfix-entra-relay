@@ -1,0 +1,21 @@
+[Unit]
+Description=Postfix Entra Relay read-only dashboard
+After=network-online.target postfix-entra-metrics.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=POSTFIX_ENTRA_DB=/var/lib/postfix-entra-relay/metrics.db
+WorkingDirectory=/opt/postfix-entra-dashboard
+ExecStart=/opt/postfix-entra-dashboard-venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8765 app:app
+User=nobody
+Group=nogroup
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/postfix-entra-relay
+
+[Install]
+WantedBy=multi-user.target

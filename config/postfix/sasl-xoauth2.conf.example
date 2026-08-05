@@ -1,9 +1,3 @@
-{
-  "client_id": "<EXTERNAL_OAUTH_PUBLIC_CLIENT_ID>",
-  "client_secret": "",
-  "token_endpoint": "https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token",
-  "refresh_window": 1200,
-  "always_log_to_syslog": "no",
-  "log_full_trace_on_failure": "no",
-  "log_to_syslog_on_failure": "yes"
-}
+client_id = <EXTERNAL_OAUTH_CLIENT_ID>
+tenant_id = <TENANT_ID>
+log_full_trace_on_failure = no

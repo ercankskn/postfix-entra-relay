@@ -1,0 +1,22 @@
+[Unit]
+Description=Postfix Entra Relay incremental metrics collector
+After=rsyslog.service postfix.service
+
+[Service]
+Type=simple
+Environment=POSTFIX_ENTRA_LOG=/var/log/mail.log
+Environment=POSTFIX_ENTRA_DB=/var/lib/postfix-entra-relay/metrics.db
+ExecStart=/opt/postfix-entra-dashboard-venv/bin/python /opt/postfix-entra-dashboard/collector.py --follow
+User=root
+Group=root
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/log
+ReadWritePaths=/var/lib/postfix-entra-relay
+
+[Install]
+WantedBy=multi-user.target

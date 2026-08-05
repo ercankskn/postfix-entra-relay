@@ -1,0 +1,2 @@
+2026-08-05T09:30:02+03:00 relay postfix-entra-hve-submit[100]: status=sent queue_id=ABC123 recipient=user@example.com original_sender=reporting@example.com original_header_from=reporting@example.com header_recipient_count=1
+2026-08-05T09:30:03+03:00 relay postfix/smtp[101]: DEF456: to=<recipient@external.test>, relay=smtp.office365.com[192.0.2.10]:587, delay=2.1, status=sent (250 2.0.0 queued)

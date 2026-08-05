@@ -1,7 +1,7 @@
 {
   "tenant_id": "<TENANT_ID>",
-  "client_id": "<HVE_APP_CLIENT_ID>",
-  "client_secret": "<HVE_APP_CLIENT_SECRET>",
+  "client_id": "<HVE_APPLICATION_CLIENT_ID>",
+  "client_secret": "<STORE_OUTSIDE_GIT>",
   "auth_user": "hve-relay@example.com",
   "display_name": "Application Mail Service",
   "reply_to": "relay@example.com",
@@ -9,7 +9,9 @@
   "smtp_port": 587,
   "scope": "https://outlook.office.com/.default",
   "token_refresh_margin_seconds": 1200,
+  "connect_timeout_seconds": 30,
+  "state_dir": "/var/lib/postfix-entra-relay",
   "bulk_to_threshold": 50,
-  "bulk_alert_recipient": "alerts@example.com",
+  "bulk_alert_recipient": "relay-alerts@example.com",
   "bulk_alert_state_max_age_seconds": 604800
 }
