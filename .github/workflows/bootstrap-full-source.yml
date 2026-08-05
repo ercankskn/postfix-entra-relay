@@ -7,6 +7,17 @@ on:
     paths:
       - ".bootstrap/**"
       - ".github/workflows/bootstrap-full-source.yml"
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - ".bootstrap/**"
+      - ".github/workflows/bootstrap-full-source.yml"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,6 +28,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
 
     steps:
