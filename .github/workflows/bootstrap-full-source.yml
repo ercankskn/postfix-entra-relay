@@ -38,28 +38,76 @@ jobs:
           ref: publish-full-source-v1
           fetch-depth: 0
 
-      - name: Recover corrupted archive chunks from verified bootstrap copy
+      - name: Recover corrupted archive chunks from repository history
         shell: bash
         run: |
           set -euo pipefail
 
-          git fetch origin full-source-bootstrap:refs/remotes/origin/full-source-bootstrap
-          git show origin/full-source-bootstrap:.bootstrap/parts/part-03.b64 \
-            | tr -d '\r\n' \
-            > /tmp/recovered-part-04-05.b64
+          recover_chunk() {
+            local path="$1"
+            local expected="$2"
+            local tmp
+            local commit
+            local object
+            local type
+            local size
+            local bytes
+            local actual
 
-          echo "RECOVERED_BYTES=$(wc -c < /tmp/recovered-part-04-05.b64)"
-          test "$(wc -c < /tmp/recovered-part-04-05.b64)" -eq 24000
+            tmp="$(mktemp)"
 
-          head -c 12000 /tmp/recovered-part-04-05.b64 > .bootstrap/full-source/part-04.b64
-          tail -c +12001 /tmp/recovered-part-04-05.b64 > .bootstrap/full-source/part-05.b64
+            while read -r commit; do
+              [ -n "$commit" ] || continue
+              if git cat-file -e "${commit}:${path}" 2>/dev/null; then
+                git show "${commit}:${path}" | tr -d '\r\n' > "$tmp"
+                bytes="$(wc -c < "$tmp")"
+                actual="$(sha256sum "$tmp" | awk '{print $1}')"
+                echo "PATH_CANDIDATE path=$path commit=$commit bytes=$bytes sha256=$actual"
 
-          printf '%s  %s\n' \
-            '4ca0a55ae1e12cac38319ef1591b1a796c2163edaadb826399a23768a0518abe' \
-            '.bootstrap/full-source/part-04.b64' \
-            '28d4611a5f3ab8ff092c55844ecf375608174ee3eb9486efa0ef43b2f86be32b' \
-            '.bootstrap/full-source/part-05.b64' \
-          | sha256sum -c -
+                if [ "$bytes" -eq 12000 ] && [ "$actual" = "$expected" ]; then
+                  cp "$tmp" "$path"
+                  rm -f "$tmp"
+                  echo "RECOVERED_FROM_PATH_HISTORY path=$path commit=$commit"
+                  return 0
+                fi
+              fi
+            done < <(git rev-list --all -- "$path")
+
+            while read -r object type size; do
+              [ "$type" = "blob" ] || continue
+              [ "$size" -ge 12000 ] || continue
+              [ "$size" -le 12200 ] || continue
+
+              git cat-file blob "$object" | tr -d '\r\n' > "$tmp"
+              bytes="$(wc -c < "$tmp")"
+              [ "$bytes" -eq 12000 ] || continue
+
+              actual="$(sha256sum "$tmp" | awk '{print $1}')"
+              if [ "$actual" = "$expected" ]; then
+                cp "$tmp" "$path"
+                rm -f "$tmp"
+                echo "RECOVERED_FROM_BLOB_HISTORY path=$path blob=$object"
+                return 0
+              fi
+            done < <(
+              git rev-list --objects --all \
+                | awk '{print $1}' \
+                | sort -u \
+                | git cat-file --batch-check='%(objectname) %(objecttype) %(objectsize)'
+            )
+
+            rm -f "$tmp"
+            echo "ERROR: matching historical blob not found for $path" >&2
+            return 1
+          }
+
+          recover_chunk \
+            .bootstrap/full-source/part-04.b64 \
+            4ca0a55ae1e12cac38319ef1591b1a796c2163edaadb826399a23768a0518abe
+
+          recover_chunk \
+            .bootstrap/full-source/part-05.b64 \
+            28d4611a5f3ab8ff092c55844ecf375608174ee3eb9486efa0ef43b2f86be32b
 
       - name: Verify archive parts
         shell: bash
