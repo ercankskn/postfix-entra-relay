@@ -52,6 +52,13 @@ class HveSubmitTests(unittest.TestCase):
         error = smtplib.SMTPAuthenticationError(535, b"5.7.143 token expired")
         self.assertTrue(should_refresh_after_error(error))
 
+    def test_generic_57127_authentication_error_requests_refresh(self):
+        error = smtplib.SMTPAuthenticationError(
+            535,
+            b"5.7.127 XOAUTH2 authentication failed",
+        )
+        self.assertTrue(should_refresh_after_error(error))
+
     def test_token_cache_reads_valid_token(self):
         with tempfile.TemporaryDirectory() as directory:
             cache = TokenCache(self.config(directory))
